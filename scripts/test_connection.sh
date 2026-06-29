@@ -146,8 +146,14 @@ fi
 
 log "DB_URL: $DB_URL"
 
-if cockroach sql --url "$DB_URL" -e "SELECT 1" >/dev/null 2>/tmp/crdb_test_err; then
+DATA_DIR="$ROOT/data"
+mkdir -p "$DATA_DIR"
+OUTPUT_FILE="$DATA_DIR/test_connection_$(date +%Y%m%d_%H%M%S).txt"
+
+if cockroach sql --url "$DB_URL" -e "SELECT 1" --format=csv >"$OUTPUT_FILE" 2>/tmp/crdb_test_err; then
   ok "Live query succeeded — DB connection is working!"
+  ok "Query output saved to: $OUTPUT_FILE"
+  cat "$OUTPUT_FILE"
 else
   fail "Live query failed. Error:"
   cat /tmp/crdb_test_err >&2
