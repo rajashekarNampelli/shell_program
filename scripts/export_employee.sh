@@ -60,13 +60,18 @@ load_config() {
 
 # JWT tokens contain characters like +, /, = that must be percent-encoded in a URL.
 url_encode() {
-  local raw="$1" length="${#raw}" i char encoded=""
-  for ((i = 0; i < length; i++)); do
+  local raw="$1"
+  local length="${#raw}"
+  local encoded=""
+  local i=0
+  local char
+  while [[ $i -lt $length ]]; do
     char="${raw:i:1}"
     case "$char" in
       [a-zA-Z0-9.~_-]) encoded+="$char" ;;
       *) printf -v encoded '%s%%%02X' "$encoded" "'$char" ;;
     esac
+    (( i++ )) || true
   done
   printf '%s' "$encoded"
 }
