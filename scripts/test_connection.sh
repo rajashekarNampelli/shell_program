@@ -103,23 +103,33 @@ log "Step 6: Running live query (SELECT 1)..."
 
 # JWT tokens contain +, /, = which must be percent-encoded in a URL.
 url_encode() {
-  local raw="$1"
-  local length="${#raw}"
-  local encoded=""
-  local i=0
+  local raw
+  raw="${1:-}"          # safe default: empty string if $1 is unset
+  local length
+  length="${#raw}"
+  local encoded
+  encoded=""
+  local i
+  i=0
   local char
+  char=""
+  log "  [url_encode] input length=$length"
   while [[ $i -lt $length ]]; do
-    char="${raw:i:1}"
+    char="${raw:$i:1}"
     case "$char" in
-      [a-zA-Z0-9.~_-]) encoded+="$char" ;;
-      *) printf -v encoded '%s%%%02X' "$encoded" "'$char" ;;
+      [a-zA-Z0-9.~_-]) encoded="${encoded}${char}" ;;
+      *) printf -v encoded '%s%%%02X' "$encoded" "'${char}" ;;
     esac
-    (( i++ )) || true
+    i=$(( i + 1 ))
   done
   printf '%s' "$encoded"
 }
 
-ENCODED_PASSWORD="$(url_encode "$DB_PASSWORD")"
+log "Step 6a: Encoding password for URL..."
+log "  DB_PASSWORD is set: $( [[ -n "${DB_PASSWORD:-}" ]] && echo YES || echo NO )"
+log "  DB_PASSWORD length: ${#DB_PASSWORD}"
+ENCODED_PASSWORD="$(url_encode "${DB_PASSWORD:-}")"
+log "  Encoded length: ${#ENCODED_PASSWORD}"
 
 if [[ "$AUTH_MODE" == "JWT" ]]; then
   DB_URL="postgresql://${DB_USER}:${ENCODED_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}?sslmode=require&options=--crdb%3Ajwt_authenabled%3Dtrue"
