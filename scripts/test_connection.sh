@@ -101,10 +101,25 @@ fi
 # ── Step 6: Live DB query ─────────────────────────────────────────────────────
 log "Step 6: Running live query (SELECT 1)..."
 
+# JWT tokens contain +, /, = which must be percent-encoded in a URL.
+url_encode() {
+  local raw="$1" length="${#raw}" i char encoded=""
+  for ((i = 0; i < length; i++)); do
+    char="${raw:i:1}"
+    case "$char" in
+      [a-zA-Z0-9.~_-]) encoded+="$char" ;;
+      *) printf -v encoded '%s%%%02X' "$encoded" "'$char" ;;
+    esac
+  done
+  printf '%s' "$encoded"
+}
+
+ENCODED_PASSWORD="$(url_encode "$DB_PASSWORD")"
+
 if [[ "$AUTH_MODE" == "JWT" ]]; then
-  DB_URL="postgresql://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}?sslmode=require&options=--crdb%3Ajwt_authenabled%3Dtrue"
+  DB_URL="postgresql://${DB_USER}:${ENCODED_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}?sslmode=require&options=--crdb%3Ajwt_authenabled%3Dtrue"
 else
-  DB_URL="postgresql://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}?sslmode=require"
+  DB_URL="postgresql://${DB_USER}:${ENCODED_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}?sslmode=require"
 fi
 
 if cockroach sql --url "$DB_URL" -e "SELECT 1" >/dev/null 2>/tmp/crdb_test_err; then

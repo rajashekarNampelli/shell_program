@@ -58,15 +58,31 @@ load_config() {
   [[ -n "${DB_PASSWORD:-}" ]] || die "DB_PASSWORD is not set in $CONFIG_FILE"
 }
 
+# JWT tokens contain characters like +, /, = that must be percent-encoded in a URL.
+url_encode() {
+  local raw="$1" length="${#raw}" i char encoded=""
+  for ((i = 0; i < length; i++)); do
+    char="${raw:i:1}"
+    case "$char" in
+      [a-zA-Z0-9.~_-]) encoded+="$char" ;;
+      *) printf -v encoded '%s%%%02X' "$encoded" "'$char" ;;
+    esac
+  done
+  printf '%s' "$encoded"
+}
+
 build_url() {
+  local encoded_password
+  encoded_password="$(url_encode "$DB_PASSWORD")"
+
   if [[ "${JWT_AUTH_CONNECTION:-false}" == "true" ]]; then
     AUTH_MODE="JWT"
     printf 'postgresql://%s:%s@%s:%s/%s?sslmode=require&options=--crdb%%3Ajwt_authenabled%%3Dtrue' \
-      "$DB_USER" "$DB_PASSWORD" "$DB_HOST" "$DB_PORT" "$DB_NAME"
+      "$DB_USER" "$encoded_password" "$DB_HOST" "$DB_PORT" "$DB_NAME"
   else
     AUTH_MODE="password"
     printf 'postgresql://%s:%s@%s:%s/%s?sslmode=require' \
-      "$DB_USER" "$DB_PASSWORD" "$DB_HOST" "$DB_PORT" "$DB_NAME"
+      "$DB_USER" "$encoded_password" "$DB_HOST" "$DB_PORT" "$DB_NAME"
   fi
 }
 
