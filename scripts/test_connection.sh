@@ -120,7 +120,7 @@ url_encode() {
   i=0
   local char
   char=""
-  log "  [url_encode] input length=$length"
+  printf '[%s]   [url_encode] input length=%s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$length" >&2
   while [[ $i -lt $length ]]; do
     char="${raw:$i:1}"
     case "$char" in
@@ -133,16 +133,18 @@ url_encode() {
 }
 
 log "Step 6a: Encoding password for URL..."
-log "  DB_PASSWORD is set: $( [[ -n "${DB_PASSWORD:-}" ]] && echo YES || echo NO )"
-log "  DB_PASSWORD length: ${#DB_PASSWORD}"
+printf '[%s]   DB_PASSWORD is set: %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$( [[ -n "${DB_PASSWORD:-}" ]] && echo YES || echo NO )" >&2
+printf '[%s]   DB_PASSWORD length: %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "${#DB_PASSWORD}" >&2
 ENCODED_PASSWORD="$(url_encode "${DB_PASSWORD:-}")"
-log "  Encoded length: ${#ENCODED_PASSWORD}"
+printf '[%s]   Encoded length: %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "${#ENCODED_PASSWORD}" >&2
 
 if [[ "$AUTH_MODE" == "JWT" ]]; then
   DB_URL="postgresql://${DB_USER}:${ENCODED_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}?sslmode=require&options=--crdb%3Ajwt_authenabled%3Dtrue"
 else
   DB_URL="postgresql://${DB_USER}:${ENCODED_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}?sslmode=require"
 fi
+
+log "DB_URL: $DB_URL"
 
 if cockroach sql --url "$DB_URL" -e "SELECT 1" >/dev/null 2>/tmp/crdb_test_err; then
   ok "Live query succeeded — DB connection is working!"
