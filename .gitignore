@@ -1,0 +1,16 @@
+# Local credentials (never commit)
+config/db.env
+
+# Generated exports
+output/*
+!output/.gitkeep
+
+# Run logs
+logs/
+
+# Incoming CSV files from other team
+data/*
+!data/.gitkeep
+
+# macOS
+.DS_Store

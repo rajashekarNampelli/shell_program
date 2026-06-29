@@ -1,0 +1,106 @@
+#!/usr/bin/env bash
+# Export employee table from CockroachDB to CSV.
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT="$SCRIPT_DIR/.."
+CONFIG_FILE="$ROOT/config/db.env"
+
+TABLE="employee"
+OUTPUT_FILE=""
+VALIDATE_ONLY=false
+
+RUN_TIMESTAMP="$(date +%Y%m%d_%H%M%S)"
+LOG_DIR="$ROOT/logs"
+LOG_FILE="$LOG_DIR/export_${RUN_TIMESTAMP}.log"
+mkdir -p "$LOG_DIR"
+
+# Tee all output (stdout + stderr) to the log file.
+exec > >(tee -a "$LOG_FILE") 2>&1
+
+usage() {
+  cat <<EOF
+Usage: $(basename "$0") [OPTIONS]
+
+Export a CockroachDB table to a CSV file.
+
+Options:
+  --table NAME   Table to export (default: employee)
+  --out PATH     Output CSV path (default: output/<table>_export_<timestamp>.csv)
+  --validate     Check config without querying the DB
+  -h, --help     Show this help
+
+Examples:
+  $(basename "$0")
+  $(basename "$0") --table employee --out output/baseline.csv
+  $(basename "$0") --validate
+EOF
+}
+
+log() {
+  printf '[%s] %s\n' "$(date +%Y-%m-%d\ %H:%M:%S)" "$*"
+}
+
+die() {
+  log "ERROR: $*"
+  exit 1
+}
+
+load_config() {
+  [[ -f "$CONFIG_FILE" ]] || die "Config not found: $CONFIG_FILE  (copy config/db.env.example to config/db.env)"
+  # shellcheck disable=SC1090
+  source "$CONFIG_FILE"
+  [[ -n "${DB_HOST:-}" ]]     || die "DB_HOST is not set in $CONFIG_FILE"
+  [[ -n "${DB_PORT:-}" ]]     || die "DB_PORT is not set in $CONFIG_FILE"
+  [[ -n "${DB_NAME:-}" ]]     || die "DB_NAME is not set in $CONFIG_FILE"
+  [[ -n "${DB_USER:-}" ]]     || die "DB_USER is not set in $CONFIG_FILE"
+  [[ -n "${DB_PASSWORD:-}" ]] || die "DB_PASSWORD is not set in $CONFIG_FILE"
+}
+
+parse_args() {
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --table)  TABLE="$2";       shift 2 ;;
+      --out)    OUTPUT_FILE="$2"; shift 2 ;;
+      --validate) VALIDATE_ONLY=true; shift ;;
+      -h|--help) usage; exit 0 ;;
+      *) die "Unknown option: $1 (use --help)" ;;
+    esac
+  done
+}
+
+main() {
+  parse_args "$@"
+  load_config
+
+  log "Log file: $LOG_FILE"
+
+  if [[ "$VALIDATE_ONLY" == true ]]; then
+    log "Config OK — host=$DB_HOST port=$DB_PORT db=$DB_NAME user=$DB_USER"
+    exit 0
+  fi
+
+  command -v cockroach >/dev/null 2>&1 || die "'cockroach' not found. Install: brew install cockroachdb/tap/cockroach"
+
+  if [[ -z "$OUTPUT_FILE" ]]; then
+    OUTPUT_FILE="$ROOT/output/${TABLE}_export_${RUN_TIMESTAMP}.csv"
+  fi
+
+  mkdir -p "$(dirname "$OUTPUT_FILE")"
+
+  log "Exporting table '$TABLE' -> $OUTPUT_FILE"
+
+  cockroach sql \
+    --url "postgresql://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}?sslmode=require" \
+    --format=csv \
+    -e "SELECT * FROM ${TABLE}" > "$OUTPUT_FILE"
+
+  [[ -s "$OUTPUT_FILE" ]] || die "Export produced an empty file: $OUTPUT_FILE"
+
+  local rows
+  rows=$(( $(wc -l < "$OUTPUT_FILE") - 1 ))
+  log "Export complete: $OUTPUT_FILE ($rows data rows)"
+}
+
+main "$@"
