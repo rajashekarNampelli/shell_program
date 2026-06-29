@@ -4,33 +4,93 @@ Bash toolkit to export employee data from CockroachDB and compare CSV files for 
 
 ## Prerequisites
 
-Install the [CockroachDB CLI](https://www.cockroachlabs.com/docs/stable/install-cockroachdb.html):
+### macOS
 
 ```bash
-# macOS (Homebrew)
 brew install cockroachdb/tap/cockroach
-
-# Verify
 cockroach version
 ```
+
+### Windows
+
+Bash scripts require one of the following environments on Windows:
+
+#### Option 1: WSL — Windows Subsystem for Linux (Recommended)
+
+1. Open PowerShell as Administrator and run:
+   ```powershell
+   wsl --install
+   ```
+2. Restart your PC. Ubuntu installs by default.
+3. Open the **Ubuntu** app from the Start menu.
+4. Inside WSL, install the CockroachDB CLI:
+   ```bash
+   curl https://binaries.cockroachdb.com/cockroach-latest.linux-amd64.tgz | tar -xz
+   sudo cp cockroach-*/cockroach /usr/local/bin/
+   cockroach version
+   ```
+5. Navigate to your project (Windows files are under `/mnt/c/`):
+   ```bash
+   cd /mnt/c/Users/YourName/path/to/Shell_Script_For_CSV_COMPARISION
+   chmod +x scripts/export_employee.sh
+   ./scripts/export_employee.sh
+   ```
+
+#### Option 2: Git Bash (Lighter alternative)
+
+1. Download and install [Git for Windows](https://git-scm.com/download/win) — choose the **"Git Bash Here"** option during install.
+2. Open **Git Bash** from the Start menu and navigate to the project folder.
+
+> Note: Git Bash has limitations installing the `cockroach` CLI. You would need to manually download the Windows binary and add it to your PATH.
+
+#### Windows software checklist
+
+| Software | Purpose | Where to get |
+|----------|---------|--------------|
+| WSL + Ubuntu | Run bash scripts natively | Built into Windows 10/11 — `wsl --install` |
+| CockroachDB CLI | Connect and export data | Install inside WSL (see above) |
+| Git for Windows | Version control + Git Bash | [git-scm.com](https://git-scm.com/download/win) |
+
+---
 
 ## Setup
 
 1. Copy the config template and fill in your credentials:
 
 ```bash
-cd Shell_Script_For_CSV_COMPARISION
 cp config/db.env.example config/db.env
-# Edit config/db.env with your cluster host, port, database, user, and password
+# Edit config/db.env with your connection details
 ```
 
-2. Make scripts executable:
+2. Make scripts executable (macOS / WSL):
 
 ```bash
 chmod +x scripts/export_employee.sh scripts/compare_csv.sh
 ```
 
-## Task 1: Export employee table to CSV
+## Authentication
+
+Set `JWT_AUTH_CONNECTION` in `config/db.env` to choose the auth method:
+
+**Standard password auth** (port 26257):
+```bash
+DB_HOST=your-host
+DB_PORT=26257
+DB_USER=your_username
+DB_PASSWORD=your_password
+JWT_AUTH_CONNECTION=false
+```
+
+**JWT token auth** (AWS-hosted CockroachDB, port 443):
+```bash
+DB_HOST=your-aws-host
+DB_PORT=443
+DB_USER=your_username
+DB_PASSWORD=your_jwt_token
+JWT_AUTH_CONNECTION=true
+```
+
+## Export employee table to CSV
 
 Validate config without connecting to the database:
 
@@ -50,13 +110,13 @@ Custom table or output path:
 ./scripts/export_employee.sh --table employee --out output/employee_baseline.csv
 ```
 
-Output is written to `output/employee_export_<timestamp>.csv` by default. The CockroachDB CSV format includes a header row.
+Output is written to `output/employee_export_<timestamp>.csv`. A log file is saved to `logs/export_<timestamp>.log`.
 
-## Task 2: Incoming CSV from another team
+## Incoming CSV from another team
 
 Place files from the other team in the `data/` directory (git-ignored).
 
-## Task 3: Compare CSV files (coming soon)
+## Compare CSV files (coming soon)
 
 ```bash
 ./scripts/compare_csv.sh output/employee_export_<timestamp>.csv data/teammate_file.csv
@@ -73,28 +133,19 @@ Shell_Script_For_CSV_COMPARISION/
 ├── config/
 │   ├── db.env.example    # committed template
 │   └── db.env            # your credentials (git-ignored)
-├── lib/
-│   ├── common.sh         # logging, error handling
-│   └── db.sh             # connection URL + export helpers
 ├── scripts/
 │   ├── export_employee.sh
 │   └── compare_csv.sh
 ├── data/                 # incoming CSVs (git-ignored)
+├── logs/                 # run logs (git-ignored)
 └── output/               # generated exports (git-ignored)
 ```
-
-## Standards
-
-- Scripts use `set -euo pipefail` and shared helpers from `lib/`
-- Credentials live only in `config/db.env` (never committed)
-- Passwords are URL-encoded for the connection string
-- Exports are timestamped and non-destructive
 
 ## Troubleshooting
 
 | Issue | Fix |
 |-------|-----|
-| `Config file not found` | Copy `config/db.env.example` to `config/db.env` |
-| `Required command 'cockroach' not found` | Install the CockroachDB CLI |
-| Connection errors | Verify host, port, credentials, and network access to the cluster |
+| `Config not found` | Copy `config/db.env.example` to `config/db.env` |
+| `cockroach not found` | Install CockroachDB CLI (see Prerequisites) |
+| Connection errors | Verify host, port, credentials, and network access |
 | Empty export file | Check table name and that the table has data |
