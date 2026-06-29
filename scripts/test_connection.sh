@@ -31,6 +31,13 @@ if [[ -f "$CONFIG_FILE" ]]; then
   ok "Config file found: $CONFIG_FILE"
   # shellcheck disable=SC1090
   source "$CONFIG_FILE"
+  # Strip Windows \r (carriage return) from all loaded variables.
+  DB_HOST="${DB_HOST//$'\r'/}"
+  DB_PORT="${DB_PORT//$'\r'/}"
+  DB_NAME="${DB_NAME//$'\r'/}"
+  DB_USER="${DB_USER//$'\r'/}"
+  DB_PASSWORD="${DB_PASSWORD//$'\r'/}"
+  JWT_AUTH_CONNECTION="${JWT_AUTH_CONNECTION//$'\r'/}"
 else
   fail "Config file not found: $CONFIG_FILE"
   if [[ "$ENV" == "WSL" ]]; then

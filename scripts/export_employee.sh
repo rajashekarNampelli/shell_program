@@ -51,6 +51,13 @@ load_config() {
   [[ -f "$CONFIG_FILE" ]] || die "Config not found: $CONFIG_FILE  (copy config/db.env.example to config/db.env)"
   # shellcheck disable=SC1090
   source "$CONFIG_FILE"
+  # Strip Windows \r (carriage return) from all loaded variables.
+  DB_HOST="${DB_HOST//$'\r'/}"
+  DB_PORT="${DB_PORT//$'\r'/}"
+  DB_NAME="${DB_NAME//$'\r'/}"
+  DB_USER="${DB_USER//$'\r'/}"
+  DB_PASSWORD="${DB_PASSWORD//$'\r'/}"
+  JWT_AUTH_CONNECTION="${JWT_AUTH_CONNECTION//$'\r'/}"
   [[ -n "${DB_HOST:-}" ]]     || die "DB_HOST is not set in $CONFIG_FILE"
   [[ -n "${DB_PORT:-}" ]]     || die "DB_PORT is not set in $CONFIG_FILE"
   [[ -n "${DB_NAME:-}" ]]     || die "DB_NAME is not set in $CONFIG_FILE"
