@@ -58,6 +58,18 @@ load_config() {
   [[ -n "${DB_PASSWORD:-}" ]] || die "DB_PASSWORD is not set in $CONFIG_FILE"
 }
 
+build_url() {
+  if [[ "${JWT_AUTH_CONNECTION:-false}" == "true" ]]; then
+    AUTH_MODE="JWT"
+    printf 'postgresql://%s:%s@%s:%s/%s?sslmode=require&options=--crdb%%3Ajwt_authenabled%%3Dtrue' \
+      "$DB_USER" "$DB_PASSWORD" "$DB_HOST" "$DB_PORT" "$DB_NAME"
+  else
+    AUTH_MODE="password"
+    printf 'postgresql://%s:%s@%s:%s/%s?sslmode=require' \
+      "$DB_USER" "$DB_PASSWORD" "$DB_HOST" "$DB_PORT" "$DB_NAME"
+  fi
+}
+
 parse_args() {
   while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -76,8 +88,11 @@ main() {
 
   log "Log file: $LOG_FILE"
 
+  local db_url
+  db_url="$(build_url)"
+
   if [[ "$VALIDATE_ONLY" == true ]]; then
-    log "Config OK — host=$DB_HOST port=$DB_PORT db=$DB_NAME user=$DB_USER"
+    log "Config OK — host=$DB_HOST port=$DB_PORT db=$DB_NAME user=$DB_USER auth=$AUTH_MODE"
     exit 0
   fi
 
@@ -89,10 +104,10 @@ main() {
 
   mkdir -p "$(dirname "$OUTPUT_FILE")"
 
-  log "Exporting table '$TABLE' -> $OUTPUT_FILE"
+  log "Exporting table '$TABLE' (auth=$AUTH_MODE) -> $OUTPUT_FILE"
 
   cockroach sql \
-    --url "postgresql://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}?sslmode=require" \
+    --url "$db_url" \
     --format=csv \
     -e "SELECT * FROM ${TABLE}" > "$OUTPUT_FILE"
 
