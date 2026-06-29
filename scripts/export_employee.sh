@@ -89,7 +89,7 @@ build_url() {
 
   if [[ "${JWT_AUTH_CONNECTION:-false}" == "true" ]]; then
     AUTH_MODE="JWT"
-    printf 'postgresql://%s:%s@%s:%s/%s?sslmode=require&options=--crdb%%3Ajwt_authenabled%%3Dtrue' \
+    printf 'postgresql://%s:%s@%s:%s/%s?sslmode=require&options=--crdb:jwt_auth_enabled=true' \
       "$DB_USER" "$encoded_password" "$DB_HOST" "$DB_PORT" "$DB_NAME"
   else
     AUTH_MODE="password"

@@ -139,7 +139,7 @@ ENCODED_PASSWORD="$(url_encode "${DB_PASSWORD:-}")"
 printf '[%s]   Encoded length: %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "${#ENCODED_PASSWORD}" >&2
 
 if [[ "$AUTH_MODE" == "JWT" ]]; then
-  DB_URL="postgresql://${DB_USER}:${ENCODED_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}?sslmode=require&options=--crdb%3Ajwt_authenabled%3Dtrue"
+  DB_URL="postgresql://${DB_USER}:${ENCODED_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}?sslmode=require&options=--crdb:jwt_auth_enabled=true"
 else
   DB_URL="postgresql://${DB_USER}:${ENCODED_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}?sslmode=require"
 fi
