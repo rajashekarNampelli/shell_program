@@ -70,7 +70,7 @@ chmod +x scripts/export_employee.sh scripts/compare_csv.sh
 
 ## Authentication
 
-Set `JWT_AUTH_CONNECTION` in `config/db.env` to choose the auth method:
+Set `AUTH_MODE` in `config/db.env` to choose the auth method:
 
 **Standard password auth** (port 26257):
 ```bash
@@ -78,7 +78,7 @@ DB_HOST=your-host
 DB_PORT=26257
 DB_USER=your_username
 DB_PASSWORD=your_password
-JWT_AUTH_CONNECTION=false
+AUTH_MODE=password
 ```
 
 **JWT token auth** (AWS-hosted CockroachDB, port 443):
@@ -87,7 +87,7 @@ DB_HOST=your-aws-host
 DB_PORT=443
 DB_USER=your_username
 DB_PASSWORD=your_jwt_token
-JWT_AUTH_CONNECTION=true
+AUTH_MODE=JWT
 ```
 
 ## Export employee table to CSV
